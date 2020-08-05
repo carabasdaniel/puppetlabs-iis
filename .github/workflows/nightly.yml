@@ -1,0 +1,52 @@
+name: "nightly"
+
+on: [push]
+
+jobs:
+  LitmusAcceptance:
+    env:
+      HONEYCOMB_WRITEKEY: 7f3c63a70eecc61d635917de46bea4e6
+      HONEYCOMB_DATASET: litmus tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Ruby 2.6
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: 2.6
+    - name: Provision test environment
+      run: |
+        cat <<EOF >> test_machines.json
+        {
+          "osList": [
+            "windows-server-2012-r2-dc-v20200609",
+            "windows-server-2016-dc-v20200609",
+            "windows-server-2019-dc-v20200609"
+          ]
+        }    
+        EOF
+        curl -X POST -H "Authorization:bearer ${{ secrets.token }}" https://provision-service-6f3kfepqcq-ez.a.run.app/v1/provision --data @test_machines.json > inventory.yaml
+    - name: Install gems
+      run: bundle install
+    - name: Fix windows agent install
+      uses: nick-invision/retry@v1
+      with:
+        timeout_minutes: 30
+        max_attempts: 5
+        retry_wait_seconds: 120
+        command: bolt script run fix_agent_install_winrm.ps1 --inventory inventory.yaml --targets winrm_nodes
+    - name: Install agent
+      uses: nick-invision/retry@v1
+      with:
+        timeout_minutes: 30
+        max_attempts: 5
+        retry_wait_seconds: 60
+        command: bundle exec rake 'litmus:install_agent'
+    - name: Install module
+      run: bundle exec rake 'litmus:install_module'
+    - name: Run acceptance tests
+      run: bundle exec rake 'litmus:acceptance:parallel'
+    - name: Remove test environment
+      if: ${{ always() }}
+      run: |
+        curl -X DELETE -H "Authorization:bearer ${{ secrets.token }}" https://provision-service-6f3kfepqcq-ez.a.run.app/v1/provision
