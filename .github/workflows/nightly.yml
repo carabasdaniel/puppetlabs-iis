@@ -51,4 +51,10 @@ jobs:
     - name: Remove test environment
       if: ${{ always() }}
       run: |
-        curl -X DELETE -H "Authorization:bearer ${{ secrets.token }}" https://provision-service-6f3kfepqcq-ez.a.run.app/v1/provision
+        uniqueid=$(cat inventory.yaml | grep -m 1 uuid | cut -d ':' -f 2 | tr -d ' ')
+        cat <<EOF >> delete_resources.json
+        {
+          "uuid" : "$uniqueid"
+        }
+        EOF
+        curl -X DELETE -H "Authorization:bearer ${{ secrets.token }}" https://provision-service-6f3kfepqcq-ez.a.run.app/v1/provision --data @delete_resources.json
