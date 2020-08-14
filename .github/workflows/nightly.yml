@@ -3,6 +3,7 @@ name: "nightly"
 on:
   schedule:
     - cron: '0 2 * * *'
+  workflow_dispatch:
 
 jobs:
   LitmusAcceptance:
@@ -20,6 +21,7 @@ jobs:
       run: |
         cat <<EOF >> test_machines.json
         {
+          "url" : "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
           "osList": [
             "windows-server-2012-r2-dc-v20200609",
             "windows-server-2016-dc-v20200609",
