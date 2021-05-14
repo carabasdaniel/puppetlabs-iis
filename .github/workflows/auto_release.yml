@@ -34,6 +34,15 @@ jobs:
         fetch-depth: 0
         persist-credentials: false
 
+    - name: Activate Ruby 2.7
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: "2.7"
+        bundler-cache: true
+
+    - name: "Install gems"
+      run: bundle install
+
     - name: "PDK Release prep"
       uses: docker://puppet/pdk:nightly
       with:
